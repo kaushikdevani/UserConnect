@@ -8,19 +8,19 @@ using namespace std;
 
 class User
 {
-    private:
-        string username;
+    protected:
+        string userID;
         string password;
     public:
         User(string name, string pass)
         {
-            username=name;
+            userID=name;
             password=pass;
         }
         // initialising getter functions for login purpusses
-        string getUsername()
+        string getUserID()
         {
-            return username;
+            return userID;
         }
         string getPassword()
         {
@@ -28,325 +28,598 @@ class User
         }
 };
 
+class Teacher;
+class Student;
+
+class Course
+{
+public:
+    string courseID;
+    string course_name;
+    Teacher* teacher;
+    unordered_set <Student*> enrolled_students;
+
+    Course (string _courseID , string _course_name , Teacher* _teacher){
+        courseID = _courseID;
+        course_name = _course_name;
+        teacher = _teacher;
+    }
+
+    void add_student ( Student* _student){
+        enrolled_students.insert(_student);
+    }
+
+};
+
+class Project
+{
+public:
+    string projectID;
+    string project_name;
+    Teacher* teacher;
+    unordered_set <Student*> enrolled_students;
+
+    Project (string _projectID , string _project_name , Teacher* _teacher){
+        projectID = _projectID;
+        project_name = _project_name;
+		teacher = _teacher;
+    }
+
+    void add_student ( Student* _student){
+        enrolled_students.insert(_student);
+    }
+};
+
+class DataBase
+{
+    public:
+        vector <Student*> students_list;
+        vector <Teacher*> teachers_list;
+        vector <Course*> courses_list;
+        vector <Project*> projects_list;
+	
+        vector<Course* > show_all_courses  (){
+			return courses_list;
+		}
+        vector<Project*> show_all_projects (){
+			return projects_list;
+		}
+		vector<Teacher*> show_all_teachers (){
+			return teachers_list;
+		}
+        vector<Student*> show_all_students (){
+            return students_list;
+        }
+};
+
 class Teacher:public User
 {
-    private:
-        string subject;
     public:
-        Teacher(string name, string pass,string sub):User(name,pass)
-        {
-            subject=sub;
+		string name;
+        vector<pair<Student*,Course*>> requests;
+
+        Teacher(string userID, string pass, string _name) : User(userID,pass){
+            name = _name;
+
         }
-        string getSubject()
-        {
-            return subject;
+
+        vector<Course*> show_my_courses (DataBase* d){
+            vector<Course*> all_courses = d->courses_list;
+            vector<Course*> my_courses;
+            int n = all_courses.size();
+            for(int i =0 ; i<n ;i++){
+                if(all_courses[i]->teacher == this){
+                    my_courses.push_back(all_courses[i]);
+                }
+            }
+            return my_courses;
+        }
+
+        vector<Project*> show_my_projects (DataBase* d){
+            vector<Project*> all_projects = d->projects_list;
+            vector<Project*> my_projects;
+            int n = all_projects.size();
+            for(int i =0 ; i<n ;i++){
+                if(all_projects[i]->teacher == this){
+                    my_projects.push_back(all_projects[i]);
+                }
+            }
+            return my_projects;
         }
 };
 
 class Student:public User
 {
-    private:
-        int CGPA;
     public:
-        Student(string name, string pass, int cg):User(name,pass)
-        {
+        string name;
+        int CGPA ;
+    
+        Student(string userID, string pass, string _name, int cg =8):User(userID,pass){
+            name = _name;
             CGPA = cg;
         }
-        int getCGPA()
-        {
+
+        vector<Course*> show_my_courses (DataBase* d){
+            vector<Course*> all_courses = d->courses_list;
+            vector<Course*> my_courses;
+            int n = all_courses.size();
+            for(int i =0 ; i<n ;i++){
+                if(all_courses[i]->enrolled_students.find(this) != all_courses[i]->enrolled_students.end()){
+                    my_courses.push_back(all_courses[i]);
+                }
+            }
+            return my_courses;
+        }
+
+        vector<Project*> show_my_projects (DataBase* d){
+            vector<Project*> all_projects = d->projects_list;
+            vector<Project*> my_projects;
+            int n = all_projects.size();
+            for(int i =0 ; i<n ;i++){
+                if(all_projects[i]->enrolled_students.find(this) != all_projects[i]->enrolled_students.end()){
+                    my_projects.push_back(all_projects[i]);
+                }
+            }
+            return my_projects;
+        }
+
+        int show_my_CGPA(){
             return CGPA;
         }
+
+        void generate_request();
 };
 
-class UserManager
-{
-    private:
-        vector <Student> students_list;
-        vector <Teacher> teachers_list;
-    public:
-        void RegisterUser(int user_portal)
-        {
-            string username;
-            string password , subject;
-            int CGPA;
+void student_page (Student* student , DataBase* d){
 
-            cout<<"Enter a unique User Name : ";
-            cin>>username;
-            cout<<"Enter Password : ";
-            cin>>password;
+    int select = 0;
+    do
+    {
+        cout<<"\n\n------------- STUDENT PORTEL --------------"<<endl;
+        cout<<"******  Get work done page  ******"<<endl;
+        cout<<"1.Show my courses"<<endl;
+        cout<<"2.Show my projects"<<endl;
+        cout<<"3.Show all courses"<<endl;
+        cout<<"4.Show all projects"<<endl;
+        cout<<"5.Show all teachers"<<endl;
+        cout<<"6.Register for a course"<<endl;
+        cout<<"7.Register for a project"<<endl;
+        cout<<"8.Go back to main menu"<<endl;
+        cout<<"Enter Your Choice : ";
 
-            if(user_portal==1)
-            {
-                cout<<"Enter your CGPA : ";
-                cin>>CGPA;
-                Student new_user = Student(username,password,CGPA);
-                students_list.push_back(new_user);
-                cout<<"** You have SUCCESSFULLY Registered! **"<<endl;
+        cin>>select;
+
+        switch(select){
+            case 1:{
+                vector<Course*> my_curses = student->show_my_courses(d);
+                cout<<"Here is the list of your courses :"<<endl;
+                for(int i=0; i<my_curses.size(); i++){
+                    cout<< i+1 << " -> course ID :" << my_curses[i]->courseID<< " -> course name :" << my_curses[i]->course_name<<endl;
+                }
+                break;
             }
-            else
-            {
-                cout<<"Enter your Subject : ";
-                cin>>subject;
-                Teacher new_user = Teacher(username,password,subject);
-                teachers_list.push_back(new_user);
-                cout<<"** You have SUCCESSFULLY Registered! **"<<endl;
+            case 2:{
+                vector<Project*> my_projects = student->show_my_projects(d);
+                cout<<"Here is the list of your projects :"<<endl;
+                for(int i=0; i<my_projects.size(); i++){
+                    cout<< i+1 << " -> project ID :" << my_projects[i]->projectID << " -> project name :" << my_projects[i]->project_name<<endl;
+                }
+                break;
             }
-            
+            case 3:{
+                vector<Course*> all_curses = d->show_all_courses();
+                cout<<"Here is the list of all courses :"<<endl;
+                for(int i=0; i<all_curses.size(); i++){
+                    cout<< i+1 << " -> course ID :" << all_curses[i]->courseID<< " -> course name :" << all_curses[i]->course_name<<" -> course teacherID :" << all_curses[i]->teacher->getUserID()<<endl;
+                }
+                break;
+            }
+            case 4:{
+                vector<Project*> all_projects = d->show_all_projects();
+                cout<<"Here is the list of all projects :"<<endl;
+                for(int i=0; i<all_projects.size(); i++){
+                    cout<< i+1 << " -> project ID :" <<all_projects[i]->projectID << " -> project name :" << all_projects[i]->project_name<<endl;
+                }
+                break;
+            }
+            case 5:{
+                vector<Teacher*> all_teachers = d->show_all_teachers();
+                cout<<"Here is the list of all teachers :"<<endl;
+                for(int i=0; i<all_teachers.size(); i++){
+                    cout<< i+1 << " -> teacher ID :" <<all_teachers[i]->getUserID() << " -> project name :" << all_teachers[i]->name<<endl;
+                }
+                break;
+            }
+            case 6:{
+                string courseID;
+                bool found = false;
+                Course* c;
+
+                do{
+                    cout<<"\nPlease mention the course ID of the course you want to join";
+                    cin>>courseID;
+
+                    vector<Course*> all_courses = d->courses_list;
+                    int n = all_courses.size();
+                    
+                    
+                    for(int i=0 ; i<n; i++){
+                        if(all_courses[i]->courseID == courseID){
+                            c = all_courses[i];
+                            found = true;
+                            break;
+                        }
+                    }
+
+                    if(found == false){
+                        cout<<"\nCourseID provided is Invalid, please recheck. Please type 0 if you want to exit, or type 1 if you want to retry.\n";
+                        bool retry = true;
+                        cin>>retry;
+                        if(retry == false)  return;
+                    }
+
+                }while(found==false);
+
+                if(found == true){
+                    Teacher* course_teacher = c->teacher;
+                    course_teacher->requests.push_back({student,c});
+                    cout<<"\nYou have successfully sent a request. Please wait till the professor accepts it.\n";
+                }
+                break;
+            }
+            case 7:{
+                cout<<"yet to add this function"<<endl;
+                break;
+            }
+            case 8:{
+                break;
+            }
+            default:{
+                cout<<"enter valid option"<<endl;
+            }
         }
+	}while (select!=8);
+}
+void teacher_page (Teacher* teacher , DataBase* d){
 
-        bool Login(string name,string pass,int user_portal)
-        {
-            if(user_portal==1)
-            {
-                for(int i = 0;i<students_list.size();i++)
-                {
-                    if(students_list[i].getUsername()==name && students_list[i].getPassword()==pass)
-                    {
-                        cout<<"Login SUCCESSFUL !"<<endl;
-                        cout<<"Student Name : "<<name<<endl;
-                        cout<<"Student CGPA : "<<students_list[i].getCGPA()<<endl;
-                        return true;
+    int select=0;
+
+    do{
+        cout<<"\n\n------------- TEACHER PORTEL --------------"<<endl;
+        cout<<"******  Get work done page  ******"<<endl;
+        cout<<"1.Show my courses"<<endl;
+        cout<<"2.Show my projects"<<endl;
+        cout<<"3.Deal with the requests"<<endl;
+        cout<<"4.Show all courses"<<endl;
+        cout<<"5.Show all projects"<<endl;
+        cout<<"6.Add a course"<<endl;
+        cout<<"7.Add a project"<<endl;
+        cout<<"8.Go back to main menu"<<endl;
+        cout<<"Enter Your Choice : ";
+
+        
+        cin>>select;
+
+        switch(select){
+            case 1:{
+                vector<Course*> my_curses = teacher->show_my_courses(d);
+                cout<<"Here is the list of your courses :"<<endl;
+                for(int i=0; i<my_curses.size(); i++){
+                    cout<< i+1 << " -> course ID :" << my_curses[i]->courseID<< " -> course name :" << my_curses[i]->course_name<<endl;
+                }
+                break;
+            }
+            case 2:{
+                vector<Project*> my_projects = teacher->show_my_projects(d);
+                cout<<"Here is the list of your projects :"<<endl;
+                for(int i=0; i<my_projects.size(); i++){
+                    cout<< i+1 << " -> project ID :" << my_projects[i]->projectID << " -> project name :" << my_projects[i]->project_name<<endl;
+                }
+                break;
+            }
+            case 3:{
+                vector<pair<Student*,Course*>> requests = teacher->requests;
+                int n = requests.size();
+
+                for(int i=0 ; i<n ; i++){
+                    Student* s = requests[i].first;
+                    Course*  c = requests[i].second;
+                    cout<<"Request from studentID:"<<s->getUserID()<<" , to join the courseID:"<<c->courseID<<endl;
+                    cout<<"Please select from below :"<<endl;
+                    cout<<"1.Accept"<<endl;
+                    cout<<"2.Reject"<<endl;
+                    cout<<"3.Deal Later"<<endl;
+                    cout<<"4.exit"<<endl;
+                    cout<<"Enter your choice :";
+
+                    int select =0;
+                    cin>>select;
+
+                    if(select == 1){
+                        c->add_student(s);
+                        requests.erase(requests.begin()+i);
+                        cout<<"\nStudent Successfully Added to the course"<<endl;
+                    }
+                    else if(select == 2){
+                        requests.erase(requests.begin()+i);
+                        cout<<"\nStudent Denied to the course"<<endl;
+                    }
+                    else if(select == 3){
+                        cout<<"Deal Later option selected."<<endl;
+                    }
+                    else if(select = 4){
+                        return;
+                    }
+                    else{
+                        cout<<"\nplease enter valid choice"<<endl;
+                        i--;
                     }
                 }
-                cout<<"Wrong Username or Password!\n";
-                cout<<"Please Enter correct credentials"<<endl;
-                return false;
+                break;
             }
-            else
-            {
-                for(int i = 0;i<teachers_list.size();i++)
-                {
-                    if(teachers_list[i].getUsername()==name && teachers_list[i].getPassword()==pass)
-                    {
-                        cout<<"Login SUCCESSFUL !";
-                        cout<<"Teacher's Name : "<<name<<endl;
-                        cout<<"Teacher's Subject : "<<teachers_list[i].getSubject()<<endl;
-                        return true;
-                    }
+            case 4:{
+                vector<Course*> all_curses = d->show_all_courses();
+                cout<<"Here is the list of all courses :"<<endl;
+                for(int i=0; i<all_curses.size(); i++){
+                    cout<< i+1 << " -> course ID :" << all_curses[i]->courseID<< " -> course name :" << all_curses[i]->course_name<<endl;
                 }
-                cout<<"Wrong Username or Password!\n";
-                cout<<"Please Enter correct credentials"<<endl;
-                return false;
+                break;
             }
-
-        }
-
-        void Show_students_list()
-        {
-            cout<<"****** Student List ******"<<endl;
-            for(int i=0;i<students_list.size();i++)
-            {
-                cout<<students_list[i].getUsername()<<endl;
-            }
-        }
-
-        void Show_teachers_list()
-        {
-            cout<<"****** Teacher's List ******"<<endl;
-            for(int i=0;i<teachers_list.size();i++)
-            {
-                cout<<teachers_list[i].getUsername()<<"-->"<<teachers_list[i].getSubject()<<endl;
-            }
-        }
-
-        bool Search_student(string username)
-        {
-            for(int i=0;i<students_list.size();i++)
-            {
-                if(students_list[i].getUsername()==username)
-                {
-                    cout<<"Student Name   : "<<username<<endl;
-                    cout<<"Student's CGPA : "<<students_list[i].getCGPA()<<endl;
-                    return true;
+            case 5:{
+                vector<Project*> all_projects = d->show_all_projects();
+                cout<<"Here is the list of all projects :"<<endl;
+                for(int i=0; i<all_projects.size(); i++){
+                    cout<< i+1 << " -> project ID :" <<all_projects[i]->projectID << " -> project name :" << all_projects[i]->project_name<<endl;
                 }
+                break;
             }
-            cout<<"Enter valied students username\n";
-            return false;
-        }
+            case 6:{
+                string course_name ;
+                cout<<"What is the name of your course :";
+                cin>> course_name;
 
-        void delete_user(string username, string password, int user_portal)
-        {
-            if(user_portal==1)
-            {
-                for(int i=0;i<students_list.size();i++)
-                {
-                    if(students_list[i].getUsername()==username && students_list[i].getPassword()==password)
-                    {
-                        students_list.erase(students_list.begin()+i);
-                        cout<<"Student User Removed Successfully."<<endl;
-                    }
-                }
+                string courseID ;
+                cout<<"Create a unique course ID :";
+                cin>> courseID;
+
+                Course* course = new Course(courseID,course_name,teacher);
+                d->courses_list.push_back(course);
+                break;
             }
-            else
-            {
-                for(int i=0;i<teachers_list.size();i++)
-                {
-                    if(teachers_list[i].getUsername()==username && teachers_list[i].getPassword()==password)
-                    {
-                        teachers_list.erase(teachers_list.begin()+i);
-                        cout<<"Teacher User Removed Successfully."<<endl;
-                    }
-                }
+            case 7:{
+                string project_name ;
+                cout<<"What is the name of your project :";
+                cin>> project_name;
+
+                string projectID ;
+                cout<<"Create a unique course ID :";
+                cin>> projectID;
+
+                Project* project = new Project(projectID,project_name,teacher);
+                break;
+            }
+            case 8:
+                break;
+            default:{
+                cout<<"enter valid option"<<endl;
             }
         }
-};
+    }while(select != 8);
+
+}
+
+void teacher_registration_portal (Teacher* teacher, DataBase* d){
+    vector<pair<Student*,Course*>> requests = teacher->requests;
+    int n = requests.size();
+
+    for(int i=0 ; i<n ; i++){
+        Student* s = requests[i].first;
+        Course*  c = requests[i].second;
+        cout<<"Request from studentID:"<<s->getUserID()<<" , to join the courseID:"<<c->courseID<<endl;
+        cout<<"Please select from below :"<<endl;
+        cout<<"1.Accept"<<endl;
+        cout<<"2.Reject"<<endl;
+        cout<<"3.Deal Later"<<endl;
+        cout<<"4.exit"<<endl;
+        cout<<"Enter your choice :";
+
+        int select =0;
+        cin>>select;
+
+        if(select == 1){
+            c->add_student(s);
+            requests.erase(requests.begin()+i);
+            cout<<"\nStudent Successfully Added to the course"<<endl;
+        }
+        else if(select == 2){
+            requests.erase(requests.begin()+i);
+            cout<<"\nStudent Denied to the course"<<endl;
+        }
+        else if(select == 3){
+            cout<<"Deal Later option selected."<<endl;
+        }
+        else if(select = 4){
+            return;
+        }
+        else{
+            cout<<"\nplease enter valid choice"<<endl;
+            i--;
+        }
+    }
+}
+void student_registration_portal (Student* student, DataBase* d){
+
+    
+}
+
+Student* student_login (DataBase* d){
+
+	string userID,password;
+	cout<<"Enter your UserID : ";
+	cin>>userID;
+	cout<<"Enter Password : ";
+	cin>>password;
+
+	int n = d->students_list.size();
+
+	for(int i=0 ; i<n ;i++){
+		if(d->students_list[i]->getUserID() == userID && d->students_list[i]->getPassword() == password){
+			return d->students_list[i];
+		}
+	}
+	return nullptr;
+}
+Teacher* teacher_login (DataBase* d){
+	string userID,password;
+	cout<<"Enter your UserID : ";
+	cin>>userID;
+	cout<<"Enter Password : ";
+	cin>>password;
+
+	int n = d->teachers_list.size();
+
+	for(int i=0 ; i<n ;i++){
+		if(d->teachers_list[i]->getUserID() == userID && d->teachers_list[i]->getPassword() == password){
+			return d->teachers_list[i];
+		}
+	}
+	return nullptr;
+}
+
+void student_registration(DataBase* d){
+
+	string _name;
+	string _userID;
+	string _password;
+
+	cout<<"Enter your name : ";
+	cin>>_name;
+	cout<<"Enter a unique UserID : ";
+	cin>>_userID;
+	cout<<"Enter Password : ";
+	cin>>_password;
+	
+	Student* s = new Student (_userID , _password, _name);
+	d->students_list.push_back(s);
+}
+void teacher_registration(DataBase* d){
+
+	string _name;
+	string _userID;
+	string _password;
+
+	cout<<"Enter your name : ";
+	cin>>_name;
+	cout<<"Enter a unique UserID : ";
+	cin>>_userID;
+	cout<<"Enter Password : ";
+	cin>>_password;
+	
+	Teacher* t = new Teacher (_userID , _password, _name);
+	d->teachers_list.push_back(t);
+}
+
+void show_student_menu  (DataBase* d) {
+	cout<<"\n\n------------- STUDENT PORTEL --------------"<<endl;
+	cout<<"******  Login and Registration Page  ******"<<endl;
+	cout<<"1.Student Login"<<endl;
+	cout<<"2.New Student Registration"<<endl;
+	cout<<"3.Return to main menu"<<endl;
+	cout<<"Enter Your Choice : ";
+
+	int select;
+	cin>>select;
+
+	if(select == 1){
+		Student* std = student_login(d);
+		if(std != nullptr){
+			student_page(std,d);
+		}
+		else{
+			cout<<"\nWrong credentials, please retry.\n";
+			show_student_menu(d);
+		}
+	}
+	else if(select ==2){
+		student_registration(d);
+	}
+	else if(select ==3){
+		return;
+	}
+	// else{
+	// 	cout<<"please select a valid option.\n";
+	// 	show_student_menu(d);
+	// }
+}
+void show_teacher_menu  (DataBase* d) {
+	cout<<"\n\n------------- TEACHERS PORTEL -------------"<<endl;
+	cout<<"******  Login and Registration Page  ******"<<endl;
+	cout<<"1.Teacher Login"<<endl;
+	cout<<"2.New Teacher Registration"<<endl;
+	cout<<"6.Return to main menu"<<endl;
+	cout<<"Enter Your Choice : ";
+
+    int select;
+	cin>>select;
+
+	if(select == 1){
+		Teacher* tch = teacher_login(d);
+		if(tch != nullptr){
+			teacher_page(tch,d);
+		}
+		else{
+			cout<<"\nWrong credentials, please retry.\n";
+			show_teacher_menu(d);
+		}
+	}
+	else if(select ==2){
+		teacher_registration(d);
+	}
+	else if(select ==3){
+		return;
+	}
+}
+
+void show_main_menu (DataBase* d) {
+
+	cout<<"\n******* Main Page *******\n\n";
+	cout<<"Welcome! Which of the following are you : "<<endl;
+	cout<<"1.Student"<<endl;
+	cout<<"2.Teacher"<<endl;
+	cout<<"3.Exit program"<<endl;
+	cout<<"Enter the corresponding number: ";
+
+    int select ;
+	cin>> select;
+
+	if(select == 1){
+		show_student_menu(d);
+	}
+	else if(select == 2){
+		show_teacher_menu(d);
+	}
+	else if(select == 3){
+		return;
+	}
+	else{
+		"\n please select a valid number.\n";
+	}
+	show_main_menu(d);
+	return;
+}
 
 int main()
 {
-    UserManager user_manage;
-    int user_portal;
-    int user_option= 1;
-    while(user_option!=0)
-    {
-        cout<<"\n******* Main Page *******\n\n";
-        cout<<"Welcome! Which of the following are you : "<<endl;
-        cout<<"1.Student"<<endl;
-        cout<<"2.Teacher"<<endl;
-        cout<<"3.Exit program"<<endl;
-        cout<<"Enter the corresponding number: ";
-        cin>>user_portal;
-        int user_choice;
-
-        if(user_portal==1)
-        {
-            cout<<"\nYou are being redirected to student's portal"<<endl;
-            do
-            {
-                cout<<"\n\n------------- STUDENT PORTEL --------------"<<endl;
-                cout<<"******  Login and Registration Page  ******"<<endl;
-                cout<<"1.Student Login"<<endl;
-                cout<<"2.New Student Registration"<<endl;
-                cout<<"3.Teacher's List"<<endl;
-                cout<<"4.Delete User"<<endl;
-                cout<<"5.Return to main menu"<<endl;
-                cout<<"Enter Your Choice : ";
-                cin>>user_choice;
-                string username,password;
-                switch(user_choice)
-                {
-                    case 1:
-                        bool correct;
-                        cout<<"Enter your Username : ";
-                        cin>>username;
-                        cout<<"Enter Password : ";
-                        cin>>password;
-                        correct = user_manage.Login(username,password,user_portal);
-                        break;
-                    case 2:
-                        user_manage.RegisterUser(user_portal);
-                        break;
-                    case 3:
-                        //first verifing that the user is a student
-                        cout<<"Enter your Username : ";
-                        cin>>username;
-                        cout<<"Enter Password : ";
-                        cin>>password;
-                        correct = user_manage.Login(username,password,user_portal);
-
-                        //now showing the teachers list
-                        if(correct)
-                            user_manage.Show_teachers_list();
-                        else
-                            cout<<"Enter valied credentials"<<endl;
-                        break;
-                    case 4:
-                        cout<<"You are trying to delete your account"<<endl;
-                        cout<<"Enter your user Name : ";
-                        cin>>username;
-                        cout<<"Are you sure you want to delete your account"<<endl;
-                        cout<<"If yes, Enter your Password : ";
-                        cin>>password;
-                        user_manage.delete_user(username,password,user_portal);
-                        break;
-                    case 5:
-                        break;
-                }
-            } while (user_choice!=5);
-        
-        }
-        else if(user_portal==2)
-        {
-            cout<<"\nYou are being redirected to teacher's portal"<<endl;
-
-            do
-            {
-                cout<<"\n\n------------- TEACHERS PORTEL -------------"<<endl;
-                cout<<"******  Login and Registration Page  ******"<<endl;
-                cout<<"1.Teacher Login"<<endl;
-                cout<<"2.New Teacher Registration"<<endl;
-                cout<<"3.show students list"<<endl;
-                cout<<"4.search a student"<<endl;
-                cout<<"5.Delete User"<<endl;
-                cout<<"6.Return to main menu"<<endl;
-                cout<<"Enter Your Choice : ";
-                cin>>user_choice;
-                string username ,password;
-
-                switch(user_choice)
-                {
-                    case 1:
-                        bool correct;
-                        cout<<"Enter your Username : ";
-                        cin>>username;
-                        cout<<"Enter Password : ";
-                        cin>>password;
-                        correct = user_manage.Login(username,password,user_portal);
-                        break;
-                    case 2:
-                        user_manage.RegisterUser(user_portal);
-                        break;
-                    case 3:
-                    //only if teacher login is true
-                        cout<<"First verify you are a teacher by entering your login credentials."<<endl;
-                        cout<<"Enter your Username : ";
-                        cin>>username;
-                        cout<<"Enter Password : ";
-                        cin>>password;
-                        correct = user_manage.Login(username,password,user_portal);
-                        //now we show the student list
-                        if(correct)
-                            user_manage.Show_students_list();
-                        else
-                            cout<<"Invalied login credentials\n";
-                        break;
-                    case 4:
-                    //only if teacher login is true
-                        cout<<"First verify you are a teacher by entering your login credentials."<<endl;
-                        cout<<"Enter your Username : ";
-                        cin>>username;
-                        cout<<"Enter Password : ";
-                        cin>>password;
-                        correct = user_manage.Login(username,password,user_portal);
-
-                        //now we do the search
-                        if(correct)
-                        {
-                            bool found;
-                            string name;
-                            cout<<"Enter Student's username : ";
-                            cin>>name;
-                            found=user_manage.Search_student(name);
-                            if(!found)
-                                cout<<"Invalied student username\n";                  
-                        }
-                        else
-                                cout<<"Enter valied credentials"<<endl;
-                        break;
-                    case 5:
-                        cout<<"You are trying to delete your account"<<endl;
-                        cout<<"Enter your user Name : ";
-                        cin>>username;
-                        cout<<"Are you sure you want to delete your account"<<endl;
-                        cout<<"If yes, Enter your Password : ";
-                        cin>>password;
-                        user_manage.delete_user(username,password,user_portal);
-                        break;
-                    case 6:
-                        break;
-                }
-            } while (user_choice!=6);
-        }
-        else
-            cout<<"\nEnter valied option\n"<<endl;
-    }
+	DataBase d ;
+	show_main_menu(&d);
+	return 0;
 }
+
+/*
+
+Problems to be addressed:
+->solving the request erasing problem
+->adding all project functionalities just like courses
+->adding viewing functionalities of student and teacher
+
+*/
