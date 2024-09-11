@@ -1,0 +1,12 @@
+s1
+abc
+kaushik
+8
+s2
+abc
+rohit
+8
+s3
+abc
+nithya
+8
