@@ -3,6 +3,8 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <fstream>
+#include <bits/stdc++.h>
 
 using namespace std;
 
@@ -36,17 +38,49 @@ class Course
 public:
     string courseID;
     string course_name;
-    Teacher* teacher;
-    unordered_set <Student*> enrolled_students;
+    string teacherID;
+    unordered_set <string> enrolled_students;
 
-    Course (string _courseID , string _course_name , Teacher* _teacher){
+    Course (string _courseID , string _course_name , string _teacherID){
         courseID = _courseID;
         course_name = _course_name;
-        teacher = _teacher;
+        teacherID = _teacherID;
     }
 
-    void add_student ( Student* _student){
-        enrolled_students.insert(_student);
+    void add_student ( string _studentID){
+        enrolled_students.insert(_studentID);
+    }
+
+    void save_to_file(std::ofstream& outFile) {
+        outFile << courseID << "\n";
+        outFile << course_name << "\n";
+        outFile << teacherID << "\n";
+        outFile << enrolled_students.size() << "\n";  // Store number of students
+
+        for (const string& studentID : enrolled_students) {
+            outFile << studentID << "\n";  // Store each student's ID
+        }
+    }
+
+    static Course* load_from_file(std::ifstream& inFile) {
+        string courseID, course_name, teacherID;
+        getline(inFile, courseID);
+        getline(inFile, course_name);
+        getline(inFile, teacherID);
+
+        Course* course = new Course(courseID, course_name, teacherID);
+
+        int num_students;
+        inFile >> num_students;
+        inFile.ignore();  // Ignore the newline after reading the number
+
+        for (int i = 0; i < num_students; ++i) {
+            string studentID;
+            getline(inFile, studentID);
+            course->add_student(studentID);
+        }
+
+        return course;
     }
 
 };
@@ -77,7 +111,7 @@ class DataBase
         vector <Teacher*> teachers_list;
         vector <Course*> courses_list;
         vector <Project*> projects_list;
-	
+
         vector<Course* > show_all_courses  (){
 			return courses_list;
 		}
@@ -100,7 +134,20 @@ class Teacher:public User
 
         Teacher(string userID, string pass, string _name) : User(userID,pass){
             name = _name;
+        }
 
+        void save_to_file (ofstream & outFile){
+            outFile << userID << "\n" << password << "\n" << name << "\n";
+        }
+
+        static Teacher* load_from_file(ifstream & inFile){
+            string userID, password, name;
+
+            getline(inFile,userID);
+            getline(inFile,password);
+            getline(inFile,name);
+
+            return new Teacher(userID,password,name);
         }
 
         vector<Course*> show_my_courses (DataBase* d){
@@ -108,7 +155,7 @@ class Teacher:public User
             vector<Course*> my_courses;
             int n = all_courses.size();
             for(int i =0 ; i<n ;i++){
-                if(all_courses[i]->teacher == this){
+                if(all_courses[i]->teacherID == this->userID){
                     my_courses.push_back(all_courses[i]);
                 }
             }
@@ -139,12 +186,31 @@ class Student:public User
             CGPA = cg;
         }
 
+        void save_to_file (ofstream & outFile){
+            outFile << userID << "\n" << password << "\n" << name << "\n" << CGPA << "\n";
+        }
+
+        static Student* load_from_file(ifstream & inFile){
+            string userID, password, name;
+
+            int CGPA;
+            getline(inFile,userID);
+            getline(inFile,password);
+            getline(inFile,name);
+            inFile>>CGPA;
+            inFile.ignore();
+
+            return new Student(userID,password,name,CGPA);
+        }
+
+
+
         vector<Course*> show_my_courses (DataBase* d){
             vector<Course*> all_courses = d->courses_list;
             vector<Course*> my_courses;
             int n = all_courses.size();
             for(int i =0 ; i<n ;i++){
-                if(all_courses[i]->enrolled_students.find(this) != all_courses[i]->enrolled_students.end()){
+                if(all_courses[i]->enrolled_students.find(this->userID) != all_courses[i]->enrolled_students.end()){
                     my_courses.push_back(all_courses[i]);
                 }
             }
@@ -210,7 +276,7 @@ void student_page (Student* student , DataBase* d){
                 vector<Course*> all_curses = d->show_all_courses();
                 cout<<"Here is the list of all courses :"<<endl;
                 for(int i=0; i<all_curses.size(); i++){
-                    cout<< i+1 << " -> course ID :" << all_curses[i]->courseID<< " -> course name :" << all_curses[i]->course_name<<" -> course teacherID :" << all_curses[i]->teacher->getUserID()<<endl;
+                    cout<< i+1 << " -> course ID :" << all_curses[i]->courseID<< " -> course name :" << all_curses[i]->course_name<<" -> course teacherID :" << all_curses[i]->teacherID<<endl;
                 }
                 break;
             }
@@ -236,7 +302,7 @@ void student_page (Student* student , DataBase* d){
                 Course* c;
 
                 do{
-                    cout<<"\nPlease mention the course ID of the course you want to join";
+                    cout<<"\nPlease mention the course ID of the course you want to join :";
                     cin>>courseID;
 
                     vector<Course*> all_courses = d->courses_list;
@@ -261,7 +327,14 @@ void student_page (Student* student , DataBase* d){
                 }while(found==false);
 
                 if(found == true){
-                    Teacher* course_teacher = c->teacher;
+                    int n = d->teachers_list.size();
+                    Teacher* course_teacher;
+                    for(int i=0 ; i<n ; i++){
+                        if(d->teachers_list[i]->getUserID() == c->teacherID){
+                            course_teacher = d->teachers_list[i];
+                            break;
+                        }
+                    }
                     course_teacher->requests.push_back({student,c});
                     cout<<"\nYou have successfully sent a request. Please wait till the professor accepts it.\n";
                 }
@@ -321,7 +394,7 @@ void teacher_page (Teacher* teacher , DataBase* d){
                 vector<pair<Student*,Course*>> requests = teacher->requests;
                 int n = requests.size();
 
-                for(int i=0 ; i<n ; i++){
+                for(int i=n-1 ; i>=0 ; i--){
                     Student* s = requests[i].first;
                     Course*  c = requests[i].second;
                     cout<<"Request from studentID:"<<s->getUserID()<<" , to join the courseID:"<<c->courseID<<endl;
@@ -336,7 +409,7 @@ void teacher_page (Teacher* teacher , DataBase* d){
                     cin>>select;
 
                     if(select == 1){
-                        c->add_student(s);
+                        c->add_student(s->getUserID());
                         requests.erase(requests.begin()+i);
                         cout<<"\nStudent Successfully Added to the course"<<endl;
                     }
@@ -352,7 +425,7 @@ void teacher_page (Teacher* teacher , DataBase* d){
                     }
                     else{
                         cout<<"\nplease enter valid choice"<<endl;
-                        i--;
+                        i++;
                     }
                 }
                 break;
@@ -382,7 +455,7 @@ void teacher_page (Teacher* teacher , DataBase* d){
                 cout<<"Create a unique course ID :";
                 cin>> courseID;
 
-                Course* course = new Course(courseID,course_name,teacher);
+                Course* course = new Course(courseID,course_name,teacher->getUserID());
                 d->courses_list.push_back(course);
                 break;
             }
@@ -412,7 +485,7 @@ void teacher_registration_portal (Teacher* teacher, DataBase* d){
     vector<pair<Student*,Course*>> requests = teacher->requests;
     int n = requests.size();
 
-    for(int i=0 ; i<n ; i++){
+    for(int i=n-1 ; i>=0 ; i--){
         Student* s = requests[i].first;
         Course*  c = requests[i].second;
         cout<<"Request from studentID:"<<s->getUserID()<<" , to join the courseID:"<<c->courseID<<endl;
@@ -427,7 +500,7 @@ void teacher_registration_portal (Teacher* teacher, DataBase* d){
         cin>>select;
 
         if(select == 1){
-            c->add_student(s);
+            c->add_student(s->getUserID());
             requests.erase(requests.begin()+i);
             cout<<"\nStudent Successfully Added to the course"<<endl;
         }
@@ -443,7 +516,7 @@ void teacher_registration_portal (Teacher* teacher, DataBase* d){
         }
         else{
             cout<<"\nplease enter valid choice"<<endl;
-            i--;
+            i++;
         }
     }
 }
@@ -608,10 +681,79 @@ void show_main_menu (DataBase* d) {
 	return;
 }
 
+void load_all_students(DataBase* d){
+    ifstream inFile("students.txt");
+    while (!inFile.eof()) {
+        Student* student = Student::load_from_file(inFile);
+        if (!student->getUserID().empty()) {  // To avoid loading an empty student
+            d->students_list.push_back(student);
+        }
+    }
+    inFile.close();
+}
+void save_all_students(DataBase* d){
+    ofstream outFile("students.txt");
+    for (Student* student : d->students_list) {
+        student->save_to_file(outFile);
+    }
+    outFile.close();
+}
+
+void load_all_teachers(DataBase* d){
+    ifstream inFile("teachers.txt");
+    while (!inFile.eof()) {
+        Teacher* teacher = Teacher::load_from_file(inFile);
+        if (!teacher->getUserID().empty()) {  // To avoid loading an empty student
+            d->teachers_list.push_back(teacher);
+        }
+    }
+    inFile.close();
+}
+void save_all_teachers(DataBase* d){
+    ofstream outFile("teachers.txt");
+    for (Teacher* teacher : d->teachers_list) {
+        teacher->save_to_file(outFile);
+    }
+    outFile.close();
+}
+
+void load_all_courses(DataBase* d){
+    ifstream inFile("courses.txt");
+    while (!inFile.eof()) {
+        Course* course = Course::load_from_file(inFile);
+        if (!course->courseID.empty()) {  // Check to avoid loading empty courses
+            d->courses_list.push_back(course);
+        }
+    }
+    inFile.close();
+}
+void save_all_courses(DataBase* d){
+    ofstream outFile("courses.txt");
+    for (Course* course : d->courses_list) {
+        course->save_to_file(outFile);
+    }
+    outFile.close();
+}
+
+void load_all_data(DataBase* d){
+    load_all_students(d);
+    load_all_teachers(d);
+    load_all_courses(d);
+    // load_all_projects(d);
+}
+void save_all_data(DataBase* d){
+    save_all_students(d);
+    save_all_teachers(d);
+    save_all_courses(d);
+    // save_all_projects(d);
+}
+
 int main()
 {
 	DataBase d ;
+    load_all_data(&d);
 	show_main_menu(&d);
+    save_all_data(&d);
 	return 0;
 }
 
