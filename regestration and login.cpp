@@ -1,5 +1,11 @@
-#include <bits/stdc++.h>
+//Please run the program to start using the application
+
+#include <iostream>
+#include <string>
+#include <vector>
 #include <fstream>
+#include <bits/stdc++.h>
+
 using namespace std;
 
 class User
